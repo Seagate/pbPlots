@@ -1,0 +1,169 @@
+# pbPlots C++ Library Build Configuration
+# Compiles pbPlots.cpp and supportLib.cpp as a static library
+
+# Project definitions.
+#project('pbPlots', 'cpp', default_options: ['cpp_std=c++14', 'default_library=static'])
+
+# Get compiler
+cpp = meson.get_compiler('cpp')
+
+# Source files for pbPlots library
+pbplots_sources = files(
+    'pbPlots.cpp',
+    'supportLib.cpp'
+)
+
+# Header files
+pbplots_headers = include_directories('.')
+
+# Compiler and linker flags matching DHM project standards
+cxx_flags = []
+warning_flags = []
+
+# Warning flags for gcc/clang (consistent with main meson.build)
+if cpp.get_id().contains('gcc') or cpp.get_id().contains('clang')
+    warning_flags = [
+        '-Wshadow=compatible-local',
+        '-Wvla',
+        '-Wfloat-equal',
+        '-Wnull-dereference',
+        '-Wunused-const-variable',
+        '-Wunused-parameter',
+        '-Wunused-value',
+        '-Wduplicated-cond',
+        '-Wjump-misses-init',
+        '-Wstringop-overflow',
+        '-Wlogical-op',
+        '-Wshift-overflow',
+        '-Wshift-overflow=1',
+        '-Wshift-overflow=2',
+        '-Wdouble-promotion',
+        '-Werror=format-security',
+        '-Wold-style-definition',
+        '-Wstrict-prototypes',
+        '-Wmissing-declarations',
+        '-Wmissing-prototypes',
+        '-Wchar-subscripts',
+        '-Wundef',
+        '-Wformat',
+        '-Wformat=2',
+        '-Wint-conversion',
+        '-Wenum-conversion',
+        '-Wfloat-conversion',
+        '-Wint-to-pointer-cast',
+        '-Wimplicit-fallthrough',
+        '-fstrict-flex-arrays=1',
+        '-fno-delete-null-pointer-checks',
+        '-fno-strict-overflow',
+        '-fno-strict-aliasing',
+        '-ftrivial-auto-var-init=zero',
+        '-fzero-init-padding-bits=all',
+        '-Wtrampolines',
+        '-Wincompatible-pointer-types-discards-qualifiers',
+        '-Woverlength-strings',
+        '-Wnewline-eof',
+        '-Wno-c23-extensions',
+        '-Wparentheses',
+        '-Wextra-semi',
+        '-Wcast-qual',
+        '-Werror=sometimes-uninitialized',
+        '-Wuninitialized',
+        '-Wunevaluated-expression',
+        '-Wunsequenced',
+        '-Wvarargs',
+        '-Wwrite-strings',
+        '-Wrestrict',
+        '-Wstringop-truncation',
+        '-Werror=trigraphs',
+        '-Wunreachable-code',
+        '-Wcomment',
+        '-Wsequence-point',
+        '-Wreturn-type',
+        '-fvisibility=hidden',
+        '-Wmismatched-dealloc',
+        '-Wfree-nonheap-object',
+    ]
+
+    if cpp.get_id().contains('gcc') and cpp.version().version_compare('>=10.0')
+        warning_flags += '-Wsign-conversion'
+    endif
+
+    if cpp.get_id().contains('gcc') and target_machine.system() != 'windows'
+        warning_flags += '-fstack-clash-protection'
+    endif
+
+elif cpp.get_id().contains('msvc')
+    warning_flags = [
+        '/wd4214',
+        '/wd4201',
+        '/wd4668',
+        '/wd4820',
+        '/wd4710',
+        '/wd5045',
+        '/wd4711',
+        '/wd4324',
+        '/wd4221',
+        '/wd4204',
+        '/wd4061',
+        '/wd5105',
+        '/wd4746',
+        '/w14255',
+        '/w14062',
+        '/w14101',
+        '/w14189',
+        '/w15031',
+        '/w15032',
+        '/w15262',
+        '/we4837',
+        '/we4628',
+        '/we4289',
+        '/wd4828'
+    ]
+    
+    if target_machine.cpu_family() == 'x86_64' or target_machine.cpu_family() == 'x86'
+        warning_flags += '/QIntel-jcc-erratum'
+    endif
+endif
+
+# Build-type specific flags
+buildtype = get_option('buildtype')
+if buildtype == 'debug'
+    cxx_flags += ['-g', '-D_DEBUG']
+else
+    cxx_flags += ['-O2']
+    if cpp.get_id().contains('gcc') or cpp.get_id().contains('clang')
+        cxx_flags += '-s'
+    endif
+endif
+
+# Linker flags
+lflags = ['-static']
+if target_machine.system() == 'linux'
+    lflags += ['-lm', '-lrt']
+endif
+
+if cpp.get_id().contains('gcc') or cpp.get_id().contains('clang')
+    lflags += [
+        '-Wl,-z,nodlopen',
+        '-Wl,-z,noexecstack',
+        '-Wl,-z,relro',
+        '-Wl,-z,now'
+    ]
+endif
+
+# Create pbPlots static library
+pbplots_lib = static_library(
+    'pbplots',
+    pbplots_sources,
+    include_directories: pbplots_headers,
+    c_args: cpp.get_supported_arguments(warning_flags),
+    cpp_args: cxx_flags + cpp.get_supported_arguments(warning_flags),
+    link_args: lflags,
+    install: false
+)
+
+# Declare dependency for use by other projects
+pbplots_dep = declare_dependency(
+    link_with: pbplots_lib,
+    include_directories: pbplots_headers
+)

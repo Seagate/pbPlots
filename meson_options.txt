@@ -1,0 +1,2 @@
+option('build_variant', type: 'combo', choices: ['cpp', 'c', 'both'], 
+       value: 'cpp', description: 'Which pbPlots variant to build: cpp (C++ only), c (C only), or both')
